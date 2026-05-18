@@ -1,4 +1,4 @@
-package com.example.a71;
+package com.example.a91;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -25,6 +25,7 @@ public class MainActivity extends AppCompatActivity {
 
         Button btnCreateAdvert = findViewById(R.id.btnCreateAdvert);
         Button btnShowItems = findViewById(R.id.btnShowItems);
+        Button btnShowOnMap = findViewById(R.id.btnShowOnMap);
 
         btnCreateAdvert.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, CreateAdvertActivity.class);
@@ -33,6 +34,11 @@ public class MainActivity extends AppCompatActivity {
 
         btnShowItems.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, ShowItemsActivity.class);
+            startActivity(intent);
+        });
+
+        btnShowOnMap.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, MapsActivity.class);
             startActivity(intent);
         });
     }

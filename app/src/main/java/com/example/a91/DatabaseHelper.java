@@ -1,4 +1,4 @@
-package com.example.a71;
+package com.example.a91;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -12,7 +12,7 @@ import java.util.List;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "lost_found_db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 3;
 
     public static final String TABLE_ITEMS = "items";
     public static final String COLUMN_ID = "id";
@@ -22,6 +22,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_DESCRIPTION = "description";
     public static final String COLUMN_DATE = "date";
     public static final String COLUMN_LOCATION = "location";
+    public static final String COLUMN_LATITUDE = "latitude";
+    public static final String COLUMN_LONGITUDE = "longitude";
     public static final String COLUMN_CATEGORY = "category";
     public static final String COLUMN_IMAGE = "image";
     public static final String COLUMN_TIMESTAMP = "timestamp";
@@ -35,6 +37,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     COLUMN_DESCRIPTION + " TEXT, " +
                     COLUMN_DATE + " TEXT, " +
                     COLUMN_LOCATION + " TEXT, " +
+                    COLUMN_LATITUDE + " REAL, " +
+                    COLUMN_LONGITUDE + " REAL, " +
                     COLUMN_CATEGORY + " TEXT, " +
                     COLUMN_IMAGE + " BLOB, " +
                     COLUMN_TIMESTAMP + " INTEGER" +
@@ -55,7 +59,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    public long insertItem(String type, String name, String phone, String description, String date, String location, String category, byte[] image, long timestamp) {
+    public long insertItem(String type, String name, String phone, String description, String date, String location, double latitude, double longitude, String category, byte[] image, long timestamp) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_TYPE, type);
@@ -64,6 +68,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(COLUMN_DESCRIPTION, description);
         values.put(COLUMN_DATE, date);
         values.put(COLUMN_LOCATION, location);
+        values.put(COLUMN_LATITUDE, latitude);
+        values.put(COLUMN_LONGITUDE, longitude);
         values.put(COLUMN_CATEGORY, category);
         values.put(COLUMN_IMAGE, image);
         values.put(COLUMN_TIMESTAMP, timestamp);
@@ -128,6 +134,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DESCRIPTION)),
                 cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_DATE)),
                 cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_LOCATION)),
+                cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_LATITUDE)),
+                cursor.getDouble(cursor.getColumnIndexOrThrow(COLUMN_LONGITUDE)),
                 cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CATEGORY)),
                 cursor.getBlob(cursor.getColumnIndexOrThrow(COLUMN_IMAGE)),
                 cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP))

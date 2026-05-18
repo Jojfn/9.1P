@@ -29,6 +29,17 @@
         <activity
             android:name=".ItemDetailActivity"
             android:parentActivityName=".ShowItemsActivity" />
+        <activity
+            android:name=".MapsActivity"
+            android:parentActivityName=".MainActivity" />
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyAf_xVXXqHtLreqAIlvl8qefljrYlJ3Mvs" />
     </application>
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
 </manifest>

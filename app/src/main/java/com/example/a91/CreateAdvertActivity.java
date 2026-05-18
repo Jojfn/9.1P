@@ -1,9 +1,12 @@
-package com.example.a71;
+package com.example.a91;
 
+import android.Manifest;
 import android.app.DatePickerDialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -20,12 +23,26 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.widget.Autocomplete;
+import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
+
+import com.google.android.gms.location.Priority;
+import com.google.android.gms.tasks.CancellationTokenSource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 
 public class CreateAdvertActivity extends AppCompatActivity {
@@ -33,11 +50,27 @@ public class CreateAdvertActivity extends AppCompatActivity {
     private RadioGroup rgType;
     private EditText etName, etPhone, etDescription, etDate, etLocation;
     private Spinner spinnerCategory;
-    private Button btnSelectImage, btnSave;
+    private Button btnSelectImage, btnSave, btnGetCurrentLocation;
     private ImageView ivSelectedImage;
     private byte[] imageByteArray;
+    private double selectedLat, selectedLng;
 
     private DatabaseHelper dbHelper;
+    private FusedLocationProviderClient fusedLocationClient;
+
+    private final ActivityResultLauncher<Intent> autocompleteLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    Place place = Autocomplete.getPlaceFromIntent(result.getData());
+                    etLocation.setText(place.getAddress());
+                    if (place.getLatLng() != null) {
+                        selectedLat = place.getLatLng().latitude;
+                        selectedLng = place.getLatLng().longitude;
+                    }
+                }
+            }
+    );
 
     private final ActivityResultLauncher<Intent> imagePickerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
@@ -70,6 +103,11 @@ public class CreateAdvertActivity extends AppCompatActivity {
         }
 
         dbHelper = new DatabaseHelper(this);
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        if (!Places.isInitialized()) {
+            Places.initialize(getApplicationContext(), "AIzaSyAf_xVXXqHtLreqAIlvl8qefljrYlJ3Mvs");
+        }
 
         rgType = findViewById(R.id.rgType);
         etName = findViewById(R.id.etName);
@@ -80,21 +118,70 @@ public class CreateAdvertActivity extends AppCompatActivity {
         spinnerCategory = findViewById(R.id.spinnerCategory);
         btnSelectImage = findViewById(R.id.btnSelectImage);
         btnSave = findViewById(R.id.btnSave);
+        btnGetCurrentLocation = findViewById(R.id.btnGetCurrentLocation);
         ivSelectedImage = findViewById(R.id.ivSelectedImage);
 
-        String[] categories = {"Electronics", "Pets", "Wallets", "Documents", "Others"};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categories);
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this, R.array.categories_array, android.R.layout.simple_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerCategory.setAdapter(adapter);
 
         btnSelectImage.setOnClickListener(v -> {
-            Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.setType("image/*");
+            intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/jpeg", "image/png", "image/webp"});
             imagePickerLauncher.launch(intent);
         });
 
         btnSave.setOnClickListener(v -> saveAdvert());
 
         etDate.setOnClickListener(v -> showDatePicker());
+
+        etLocation.setOnClickListener(v -> startAutocomplete());
+
+        btnGetCurrentLocation.setOnClickListener(v -> getCurrentLocation());
+    }
+
+    private void startAutocomplete() {
+        List<Place.Field> fields = Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG);
+        Intent intent = new Autocomplete.IntentBuilder(AutocompleteActivityMode.FULLSCREEN, fields)
+                .build(this);
+        autocompleteLauncher.launch(intent);
+    }
+
+    private void getCurrentLocation() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 100);
+            return;
+        }
+
+        Toast.makeText(this, "Fetching current location...", Toast.LENGTH_SHORT).show();
+        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, new CancellationTokenSource().getToken())
+                .addOnSuccessListener(this, location -> {
+                    if (location != null) {
+                        selectedLat = location.getLatitude();
+                        selectedLng = location.getLongitude();
+                        etLocation.setText(getString(R.string.current_location_display, selectedLat, selectedLng));
+                        Toast.makeText(this, "Location updated", Toast.LENGTH_SHORT).show();
+                    } else {
+                        fusedLocationClient.getLastLocation().addOnSuccessListener(this, lastLocation -> {
+                            if (lastLocation != null) {
+                                selectedLat = lastLocation.getLatitude();
+                                selectedLng = lastLocation.getLongitude();
+                                etLocation.setText(getString(R.string.current_location_display, selectedLat, selectedLng));
+                            } else {
+                                Toast.makeText(this, "Unable to get current location. Please ensure GPS is enabled.", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 100 && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            getCurrentLocation();
+        }
     }
 
     private void showDatePicker() {
@@ -115,8 +202,17 @@ public class CreateAdvertActivity extends AppCompatActivity {
     }
 
     private byte[] getBytesFromBitmap(Bitmap bitmap) {
+        int maxWidth = 800;
+        int maxHeight = 800;
+        float ratio = Math.min((float) maxWidth / bitmap.getWidth(), (float) maxHeight / bitmap.getHeight());
+        if (ratio < 1.0f) {
+            int width = Math.round(ratio * bitmap.getWidth());
+            int height = Math.round(ratio * bitmap.getHeight());
+            bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
+        }
+
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 70, stream);
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream);
         return stream.toByteArray();
     }
 
@@ -142,7 +238,7 @@ public class CreateAdvertActivity extends AppCompatActivity {
             return;
         }
 
-        long id = dbHelper.insertItem(type, name, phone, description, date, location, category, imageByteArray, timestamp);
+        long id = dbHelper.insertItem(type, name, phone, description, date, location, selectedLat, selectedLng, category, imageByteArray, timestamp);
 
         if (id != -1) {
             Toast.makeText(this, "Advert saved successfully", Toast.LENGTH_SHORT).show();

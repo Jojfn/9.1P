@@ -26,4 +26,5 @@
     <string name="hours_ago">%1$d hours ago</string>
     <string name="minutes_ago">%1$d minutes ago</string>
     <string name="just_now">Just now</string>
+    <string name="current_location_display">Lat: %1$.4f, Lng: %2$.4f</string>
 </resources>
